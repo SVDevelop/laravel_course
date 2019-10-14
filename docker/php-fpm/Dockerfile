@@ -42,7 +42,10 @@ COPY . /var/www
 RUN (crontab -l ; echo "* * * * * /usr/bin/php /var/www/artisan schedule:run >>/dev/null 2>&1") | crontab
 
 # Copy existing application directory permissions
-COPY --chown=www:www . /var/www
+#COPY --chown=www:www . /var/www
+
+COPY . /var/www
+RUN chown -R www:www /var/www
 
 # Expose port 9000 and start php-fpm server
 EXPOSE 9000

@@ -2,18 +2,18 @@ version: '3'
 services:
 
   #PHP Service
-  app:
+  apache_php:
     build:
       context: .
       dockerfile: ./docker/php-fpm/Dockerfile
     image: digitalocean.com/php
-    container_name: "${DOCKER_PREFIX}-app"
+    container_name: ${DOCKER_PREFIX}-apache_php
     restart: unless-stopped
     tty: true
     depends_on:
       - db
     environment:
-      SERVICE_NAME: app
+      SERVICE_NAME: apache_php
       SERVICE_TAGS: dev
     working_dir: /var/www
     user: "1000:1000"
@@ -27,12 +27,14 @@ services:
   #MySQL Service
   db:
     image: mysql:8.0.15
-    container_name: "${DOCKER_PREFIX}-db"
+    container_name: ${DOCKER_PREFIX}-db
     restart: unless-stopped
     tty: true
     command:
       --default-authentication-plugin=mysql_native_password
       --performance-schema --secure-file-priv=""
+
+      #--bash -c "mysqld --user=root --group_concat_max_len=1844674407370954752"
     ports:
       - "3306:3306"
     environment:
@@ -41,19 +43,32 @@ services:
       SERVICE_TAGS: dev
       SERVICE_NAME: mysql
     volumes:
-      - dbdata:/var/lib/mysql/
+      - ./dbdata:/var/lib/mysql
       - ./docker/mysql/my.cnf:/etc/mysql/my.cnf
     networks:
       - app-network
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    container_name: ${DOCKER_PREFIX}-phpmyadmin
+    links: 
+      - db:db
+    ports:
+      - 8765:80
+    environment:
+      # MYSQL_USER: ${DB_USER}
+      # MYSQL_PASSWORD: ${DB_PASSWORD}
+      # MYSQL_ROOT_PASSWORD: toor
+      PMA_ARBITRARY: 1
+    restart: always
 
   #Nginx Service
   webserver:
     image: nginx:alpine
-    container_name: "${DOCKER_PREFIX}-server"
+    container_name: ${DOCKER_PREFIX}-nginx
     restart: unless-stopped
     tty: true
     depends_on:
-      - app
+      - apache_php
     ports:
       - "80:80"
     volumes:
